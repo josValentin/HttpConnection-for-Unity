@@ -75,6 +75,15 @@ namespace HttpConnection
         }
 
         /// <summary>
+        /// Get from server with desired url. Returns byte[]
+        /// </summary>
+        /// <param name="thisObj">The object where the coroutine will be executed</param>
+        public static void GET_REQUEST(this MonoBehaviour thisObj, string requestName, string url, Action<byte[]> OnComplete, Action<HttpErrorResponse> OnError = null)
+        {
+            thisObj.StartCoroutine(I_GET_REQUEST(url, requestName, OnComplete, OnError));
+        }
+
+        /// <summary>
         /// Get from server with a desired url, needs to be authorized with a token. Returns a json/text data
         /// </summary>
         /// <param name="thisObj">The object where the coroutine will be executed</param>
@@ -370,6 +379,38 @@ namespace HttpConnection
             }
         }
 
+        private static IEnumerator I_GET_REQUEST(string url, string requestName, Action<byte[]> OnComplete, Action<HttpErrorResponse> OnError = null)
+        {
+            Debug.Log($"(Http Request) {requestName} \n URL : {url}");
+
+            using (UnityWebRequest request = UnityWebRequest.Get(url))
+            {
+
+                yield return request.SendWebRequest();
+
+                if (ErrorOnRequest(request))
+                {
+                    Debug.LogError($"(ERROR) in [{ requestName}] : {request.error}");
+                    string responseError = request.downloadHandler.text;
+
+                    if (!string.IsNullOrEmpty(responseError))
+                        Debug.Log($"(Error Response) from [{requestName}] : {responseError}");
+
+                    OnError?.Invoke(HttpErrorResponse.Create(request.responseCode, responseError));
+                }
+                else
+                {
+                    byte[] response = request.downloadHandler.data;
+
+                    Debug.Log($"(Received Data) from [{requestName}]");
+
+                    OnComplete?.Invoke(response);
+
+                }
+            }
+        }
+
+
         private static IEnumerator I_GET_REQUEST_AUTH(string requestName, string url, string Token, Action<string> OnComplete, Action<HttpErrorResponse> OnError = null)
         {
             Debug.Log($"(Http Request) {requestName} \n URL : {url}");
@@ -503,3 +544,4 @@ namespace HttpConnection
         }
     }
 }
+
